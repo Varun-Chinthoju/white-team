@@ -1,52 +1,81 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-public class IntakeSubsystem {
-    public static final double INTAKE_POWER = 0.75;
+@TeleOp(name = "IntakeSubsystem")
+public class IntakeSubsystem extends LinearOpMode {
 
-    public enum State {
-        STOPPED,
-        FORWARD,
-        REVERSE
-    }
+    // ===== Subsystem (nested inside the TeleOp, outside runOpMode) =====
+    static class intakeSubsystem {
 
-    private final CRServo servo;
-    private State state = State.STOPPED;
-    private boolean previousButtonPressed;
+        enum State {
+            STOPPED,
+            FORWARD,
+            REVERSE
+        }
 
-    public IntakeSubsystem(HardwareMap hardwareMap, String servoName) {
-        servo = hardwareMap.get(CRServo.class, servoName);
-    }
+        static final double INTAKE_POWER = 0.75;
 
-    public void update(boolean buttonPressed) {
-        boolean justPressed = buttonPressed && !previousButtonPressed;
-        previousButtonPressed = buttonPressed;
+        private final CRServo servo;
+        private State state = State.STOPPED;
+        private boolean previousButtonPressed;
 
-        if (justPressed) {
-            if (state == State.STOPPED || state == State.REVERSE) {
-                state = State.FORWARD;
+        intakeSubsystem(HardwareMap hardwareMap, String servoName) {
+            servo = hardwareMap.get(CRServo.class, servoName);
+        }
+
+        void update(boolean buttonPressed) {
+            boolean justPressed = buttonPressed && !previousButtonPressed;
+            previousButtonPressed = buttonPressed;
+
+            if (justPressed) {
+                if (state == State.STOPPED || state == State.REVERSE) {
+                    state = State.FORWARD;
+                } else {
+                    state = State.REVERSE;
+                }
+            }
+
+            if (state == State.FORWARD) {
+                servo.setPower(INTAKE_POWER);
+            } else if (state == State.REVERSE) {
+                servo.setPower(-INTAKE_POWER);
             } else {
-                state = State.REVERSE;
+                servo.setPower(0.0);
             }
         }
 
-        if (state == State.FORWARD) {
-            servo.setPower(INTAKE_POWER);
-        } else if (state == State.REVERSE) {
-            servo.setPower(-INTAKE_POWER);
-        } else {
+        State getState() {
+            return state;
+        }
+
+        void stop() {
+            state = State.STOPPED;
             servo.setPower(0.0);
         }
     }
 
-    public State getState() {
-        return state;
-    }
+    // ===== OpMode =====
+    @Override
+    public void runOpMode() {
+        // --- INIT stage ---
+        intakeSubsystem intake = new intakeSubsystem(hardwareMap, "continuousServo");
+        telemetry.addLine("Ready");
+        telemetry.update();
 
-    public void stop() {
-        state = State.STOPPED;
-        servo.setPower(0.0);
+        waitForStart();
+
+        // --- RUN stage ---
+        while (opModeIsActive()) {
+            intake.update(gamepad1.a);
+            telemetry.addData("Intake State", intake.getState());
+            telemetry.update();
+        }
+
+        // --- STOP stage ---
+        intake.stop();
     }
 }
